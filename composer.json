@@ -1,0 +1,40 @@
+{
+    "name"        : "xmarcos/carbon-client",
+    "description" : "A PHP client for Carbon (Graphite's backend) using the plaintext protocol.",
+    "type"        : "library",
+    "license"     : "MIT",
+    "keywords"    : [
+        "log",
+        "metrics",
+        "graphite",
+        "carbon"
+    ],
+    "authors" : [
+        {
+            "name"  : "Marcos Sader",
+            "email" : "xmarcos@gmail.com"
+        }
+    ],
+    "support" : {
+        "issues" : "https://github.com/xmarcos/CarbonClient/issues"
+    },
+    "prefer-stable"     : true,
+    "minimum-stability" : "dev",
+    "require"           : {
+        "php" : ">=5.4.0"
+    },
+    "require-dev" : {
+        "phpunit/phpunit"     : "@stable",
+        "fabpot/php-cs-fixer" : "@stable"
+    },
+    "autoload" : {
+        "psr-4" : {
+            "xmarcos\\Carbon\\" : "src/"
+        }
+    },
+    "autoload-dev" : {
+        "psr-4" : {
+            "xmarcos\\Carbon\\" : "tests/unit/"
+        }
+    }
+}
