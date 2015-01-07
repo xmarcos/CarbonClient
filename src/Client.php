@@ -108,13 +108,11 @@ class Client
             $sent   = fwrite($this->stream, $data);
             $result = is_int($sent) && $sent === strlen($data);
         } catch (Exception $e) {
-            if ($this->throw_exceptions) {
-                $exception = $e;
-            }
+            $exception = $e;
         }
         restore_error_handler();
 
-        if (!empty($exception)) {
+        if (!empty($exception) && $this->throw_exceptions) {
             throw $exception;
         }
 
