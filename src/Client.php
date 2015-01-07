@@ -1,17 +1,20 @@
 <?php
 namespace xmarcos\Carbon;
 
+use Exception;
+use ErrorException;
 use InvalidArgumentException;
 
 class Client
 {
     protected $stream;
     protected $namespace;
+    protected $throw_exceptions;
 
     /**
      * Creates an instance of the Carbon Client
      *
-     * @param resource $stream A php stream that knows how to talk to Carbon
+     * @param resource $stream A php stream that knows how to talk to Carbon.
      */
     public function __construct($stream)
     {
@@ -20,6 +23,23 @@ class Client
         }
 
         $this->stream = $stream;
+        $this->throwExceptions(false);
+    }
+
+    /**
+     * Controls whether failed calls to Carbon will throw an Exception.
+     *
+     * @see send()
+     *
+     * @param boolean $throw
+     *
+     * @return self
+     */
+    public function throwExceptions($throw = true)
+    {
+        $this->throw_exceptions = (bool) $throw;
+
+        return $this;
     }
 
     /**
@@ -55,28 +75,50 @@ class Client
      * @param int|float $value     Metric Value
      * @param int|null  $timestamp Metric Timestamp
      *
+     * @throws ErrorException If $this->throw_exceptions is true
      * @return bool
      */
     public function send($path, $value, $timestamp = null)
     {
-        if (!is_resource($this->stream)
-            || !is_string($path)
-            || empty($path)
-            || !is_numeric($value)
-        ) {
-            return false;
+        $result    = false;
+        $exception = null;
+
+        set_error_handler(function ($code, $message, $file = null, $line = 0) {
+            throw new ErrorException($message, $code, null, $file, $line);
+        });
+
+        try {
+            if (!is_string($path) || empty($path)) {
+                throw new InvalidArgumentException('$path must be a non-empty string');
+            }
+
+            if (!is_numeric($value)) {
+                throw new InvalidArgumentException(
+                    sprintf('$value must be of type int|float, %s given.', gettype($value))
+                );
+            }
+
+            $value     = (float) $value;
+            $timestamp = is_numeric($timestamp) ? (int) $timestamp : time();
+            $full_path = $this->sanitizePath(
+                sprintf('%s.%s', $this->getNamespace(), $path)
+            );
+
+            $data   = sprintf("%s %f %d\n", $full_path, $value, $timestamp);
+            $sent   = fwrite($this->stream, $data);
+            $result = is_int($sent) && $sent === strlen($data);
+        } catch (Exception $e) {
+            if ($this->throw_exceptions) {
+                $exception = $e;
+            }
+        }
+        restore_error_handler();
+
+        if (!empty($exception)) {
+            throw $exception;
         }
 
-        $value     = (float) $value;
-        $timestamp = is_numeric($timestamp) ? (int) $timestamp : time();
-        $full_path = $this->sanitizePath(
-            sprintf('%s.%s', $this->getNamespace(), $path)
-        );
-
-        $data = sprintf("%s %f %d\n", $full_path, $value, $timestamp);
-        $sent = fwrite($this->stream, $data);
-
-        return is_int($sent) && $sent === strlen($data);
+        return $result;
     }
 
     /**
