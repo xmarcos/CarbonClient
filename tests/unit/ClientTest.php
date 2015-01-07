@@ -150,7 +150,13 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
     public function testSendErrorOnReadOnlyStream()
     {
-        $read_only_stream = fopen('php://input', 'r');
+        if (defined('HHVM_VERSION')) {
+            $this->markTestSkipped(
+                "Skipping because HHVM won't open a php://memory stream as read-only"
+            );
+        }
+
+        $read_only_stream = fopen('php://memory', 'r');
         $carbon = new Client($read_only_stream);
 
         $sent = $carbon->send('metric', 1);
