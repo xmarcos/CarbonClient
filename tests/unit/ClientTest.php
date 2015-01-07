@@ -1,6 +1,8 @@
 <?php
 namespace xmarcos\Carbon;
 
+use ErrorException;
+use ReflectionClass;
 use InvalidArgumentException;
 use PHPUnit_Framework_TestCase;
 
@@ -47,6 +49,18 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $carbon->getNamespace());
     }
 
+    public function testThrowExceptionsSetting()
+    {
+        $carbon = new Client($this->stream);
+
+        $throw_exceptions = (new ReflectionClass($carbon))->getProperty('throw_exceptions');
+        $throw_exceptions->setAccessible(true);
+        $this->assertFalse($throw_exceptions->getValue($carbon));
+
+        $carbon->throwExceptions(true);
+        $this->assertTrue($throw_exceptions->getValue($carbon));
+    }
+
     public function providerNamespaces()
     {
         return [
@@ -87,6 +101,66 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
             $this->assertEquals($expected_metric, $actual_metric_sent);
         }
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testSendErrorOnInvalidPath()
+    {
+        $carbon = new Client($this->stream);
+
+        $sent = $carbon->send(['x'], 1);
+        $this->assertFalse($sent);
+
+        $carbon->throwExceptions(true);
+        $carbon->send(['x'], 1);
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testSendErrorOnInvalidValue()
+    {
+        $carbon = new Client($this->stream);
+
+        $sent = $carbon->send('x', 'string');
+        $this->assertFalse($sent);
+
+        $carbon->throwExceptions(true);
+        $carbon->send('x', []);
+    }
+
+    /**
+     * @expectedException ErrorException
+     */
+    public function testSendErrorOnClosedStream()
+    {
+        $carbon = new Client($this->stream);
+
+        // simulate network failure
+        fclose($this->stream);
+
+        $sent = $carbon->send('metric', 1);
+        $this->assertFalse($sent);
+
+        $carbon->throwExceptions(true);
+        $sent = $carbon->send('metric', 1);
+    }
+
+    public function testSendErrorOnReadOnlyStream()
+    {
+        if (defined('HHVM_VERSION')) {
+            $this->markTestSkipped(
+                "Skipping because HHVM won't open a php://memory stream as read-only"
+            );
+        }
+
+        $read_only_stream = fopen('php://memory', 'r');
+        $carbon = new Client($read_only_stream);
+
+        $sent = $carbon->send('metric', 1);
+        $this->assertFalse($sent);
     }
 
     public function providerMetrics()
