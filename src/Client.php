@@ -133,8 +133,8 @@ class Client
      * - the wildcard character (used by graphite)
      * - leading and trailing dots
      *
-     * @param string $path the path string to sanitize
      *
+     * @param string $string
      * @return string The sanitized path string or an empty one.
      */
     public function sanitizePath($string)
