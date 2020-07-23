@@ -123,7 +123,6 @@ tools:
         excluded_dirs: [vendor, tests]
     php_pdepend: true
     php_sim: true
-    php_pdepend: true
     php_cs_fixer: true
     php_mess_detector: true
     sensiolabs_security_checker: true
